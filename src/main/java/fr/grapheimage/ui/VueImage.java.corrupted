@@ -1,0 +1,361 @@
+private int[] arrivee = null;
+    private Image img;
+    private Graphe g;
+    private WritableImage imageBuffer;
+    private PixelWriter writer;
+
+    // Components
+    private ControlPanel controlPanel;
+    private StatsTable statsTable;
+    private GraphSearchEngine engine;
+    private AnimationTimer timer;
+    private boolean isPlaying = false;
+
+    // Debug mode fields
+    private boolean pathCompleted = false;
+    private Dijkstra.Resultat lastResult = null;
+    private String lastAlgoUsed = null;
+    private Heuristics.Type lastHeuristicUsed = null;
+    private int lastTarget = -1;
+    private Tooltip debugTooltip;
+
+    public VueImage() {
+        // UI Components
+        controlPanel = new ControlPanel();
+        statsTable = new StatsTable();
+        imageView = new ImageView();
+        imageView = new ImageView();
+        imageView.setPreserveRatio(true);
+        imageView.setFitWidth(500);
+
+        this.setTop(controlPanel);
+
+        // Center Area: SplitPane for Image (Top) and Stats (Bottom)
+        javafx.scene.control.SplitPane splitPane = new javafx.scene.control.SplitPane();
+        splitPane.setOrientation(javafx.geometry.Orientation.VERTICAL);
+
+        // Image Container (StackPane for centering)
+        javafx.scene.layout.StackPane imageContainer = new javafx.scene.layout.StackPane(imageView);
+        imageContainer.setStyle(
+                "-fx-background-color: #1a1a1a; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 0);");
+
+        splitPane.getItems().addAll(imageContainer, statsTable);
+        splitPane.setDividerPositions(0.7); // 70% Image, 30% Stats
+
+        this.setCenter(splitPane);
+        // this.setBottom(statsTable); // Removed, now in SplitPane
+
+        // CSS
+        this.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm());
+
+        // Event Handlers
+        imageView.setOnMouseClicked(this::gererClic);
+
+        controlPanel.getBtnLoad().setOnAction(e -> chargerImage());
+        controlPanel.getBtnReset().setOnAction(e -> resetAll());
+        controlPanel.getBtnPlay().setOnAction(e -> togglePlay());
+
+        controlPanel.getConnectivitySelector().valueProperty().addListener((obs, oldV, newV) -> {
+            reconstruireGraphe();
+            resetAll();
+        });
+
+        // Default Image
+        img = ChargeurImage.charger("images/batman.png");
+        chargerNouvelleImage(img);
+
+        setupTimer();
+    }
+
+    private void chargerImage() {
+        FileChooser fc = new FileChooser();
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg"));
+        File f = fc.showOpenDialog(null);
+        if (f != null) {
+            chargerNouvelleImage(new Image(f.toURI().toString()));
+        }
+    }
+
+    private void chargerNouvelleImage(Image newImg) {
+        img = newImg;
+        imageView.setImage(img);
+        reconstruireGraphe();
+        resetSearchdState();
+    }
+
+    private void reconstruireGraphe() {
+        if (img == null)
+            return;
+        int[][] gris = MatriceNiveauxDeGris.convertir(img);
+
+        String selectedConn = controlPanel.getConnectivitySelector().getValue();
+        ConstructeurGraphe.ModeConnexite mode = "4-voisins".equals(selectedConn)
+                ? ConstructeurGraphe.ModeConnexite.CONNEXITE4
+                : ConstructeurGraphe.ModeConnexite.CONNEXITE8;
+
+        g = ConstructeurGraphe.construire(gris, mode);
+    }
+
+    private void resetAll() {
+        resetSearchdState();
+        depart = null;
+        arrivee = null;
+        redessinerImageBase();
+    }
+
+    private void resetSearchdState() {
+        engine = null;
+        isPlaying = false;
+        controlPanel.getBtnPlay().setText("▶ Lecture");
+        controlPanel.getBtnPlay().setDisable(true);
+        if (timer != null)
+            timer.stop();
+        // Clear buffer
+        if (img != null)
+            redessinerImageBase();
+    }
+
+    private void redessinerImageBase() {
+        // Reset displayed image to original
+        imageView.setImage(img);
+        // Also redraw points if they exist
+        // To draw points properly we need a WritableImage
+        imageBuffer = new WritableImage(img.getPixelReader(), (int) img.getWidth(), (int) img.getHeight());
+        writer = imageBuffer.getPixelWriter();
+        imageView.setImage(imageBuffer);
+
+        if (depart != null)
+            drawPoint(depart[0], depart[1], 0xFFFF0000); // Red Start
+        if (arrivee != null)
+            drawPoint(arrivee[0], arrivee[1], 0xFF00FF00); // Green End
+    }
+
+    private void gererClic(MouseEvent event) {
+        if (img == null)
+            return;
+
+        // Coordinate mapping
+        double scale = imageView.getBoundsInLocal().getWidth() / img.getWidth();
+        // Since preserveRatio is true, scale is uniform.
+        // But we need to handle letterboxing if centered.
+        // A simple way is to trust the ImageView coordinate transformation if fitWidth
+        // is used.
+        // The previous logic was robust enough. let's reuse it carefully or simplify.
+        // Previous logic:
+        double vW = imageView.getBoundsInLocal().getWidth();
+        double vH = imageView.getBoundsInLocal().getHeight();
+        double iW = img.getWidth();
+        double iH = img.getHeight();
+
+        // Calculate effective scale
+        double scaleX = vW / iW;
+        double scaleY = vH / iH;
+        double scaleFactor = Math.min(scaleX, scaleY); // fit
+
+        double actualW = iW * scaleFactor;
+        double actualH = iH * scaleFactor;
+
+        double offX = (vW - actualW) / 2;
+        double offY = (vH - actualH) / 2;
+
+        double clickX = event.getX() - offX;
+        double clickY = event.getY() - offY;
+
+        if (clickX < 0 || clickY < 0 || clickX >= actualW || clickY >= actualH)
+            return;
+
+        int px = (int) (clickX / scaleFactor);
+        int py = (int) (clickY / scaleFactor);
+
+        if (depart == null) {
+            depart = new int[] { py, px };
+        } else if (arrivee == null) {
+            arrivee = new int[] { py, px };
+            controlPanel.getBtnPlay().setDisable(false);
+        } else {
+            // Reset points on 3rd click
+            depart = new int[] { py, px };
+            arrivee = null;
+            resetSearchdState();
+        }
+        redessinerImageBase();
+    }
+
+    private void drawPoint(int y, int x, int color) {
+        // Draw a small 5x5 square
+        for (int i = -2; i <= 2; i++) {
+            for (int j = -2; j <= 2; j++) {
+                int ty = y + i;
+                int tx = x + j;
+                if (ty >= 0 && ty < img.getHeight() && tx >= 0 && tx < img.getWidth()) {
+                    writer.setArgb(tx, ty, color);
+                }
+            }
+        }
+    }
+
+    // Alpha blending: blend foreground color with background using alpha channel
+    private void setPixelWithAlpha(int x, int y, int fgArgb) {
+        int bgArgb = imageBuffer.getPixelReader().getArgb(x, y);
+        int blended = blendColors(bgArgb, fgArgb);
+        writer.setArgb(x, y, blended);
+    }
+
+    private int blendColors(int bgArgb, int fgArgb) {
+        float alpha = ((fgArgb >> 24) & 0xFF) / 255.0f;
+
+        int bgR = (bgArgb >> 16) & 0xFF;
+        int bgG = (bgArgb >> 8) & 0xFF;
+        int bgB = bgArgb & 0xFF;
+
+        int fgR = (fgArgb >> 16) & 0xFF;
+        int fgG = (fgArgb >> 8) & 0xFF;
+        int fgB = fgArgb & 0xFF;
+
+        int r = (int) (fgR * alpha + bgR * (1 - alpha));
+        int g = (int) (fgG * alpha + bgG * (1 - alpha));
+        int b = (int) (fgB * alpha + bgB * (1 - alpha));
+
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    private void togglePlay() {
+        if (isPlaying) {
+            pause();
+        } else {
+            if (engine == null) {
+                lancerRecherche();
+            }
+            play();
+        }
+    }
+
+    private void lancerRecherche() {
+        // 1. Get Params
+        String algo = controlPanel.getAlgoSelector().getValue();
+        Heuristics.Type heuristic = controlPanel.getHeuristicSelector().getValue();
+
+        int w = (int) img.getWidth();
+        int srcId = depart[0] * w + depart[1];
+        int tgtId = arrivee[0] * w + arrivee[1];
+
+        // 2. Execute Algo & Measure Time
+        long startT = System.nanoTime();
+        Dijkstra.Resultat res;
+
+        if ("Dijkstra".equals(algo)) {
+            res = Dijkstra.calculer(g, srcId, tgtId);
+        } else {
+            res = AStar.calculer(g, srcId, tgtId, w, heuristic);
+        }
+        long endT = System.nanoTime();
+        long duration = (endT - startT) / 1_000_000;
+
+        // 3. Init Engine
+        engine = new GraphSearchEngine(res, srcId, tgtId);
+
+        // Check bounds
+        double cost = (tgtId >= 0 && tgtId < res.dist.length) ? res.dist[tgtId] : -1;
+        if (cost == Double.MAX_VALUE)
+            cost = -1;
+
+        this.pendingCost = cost;
+
+        // 4. Update Stats - DEFERRED to end of animation
+        lastAlgo = algo;
+        lastHeuristic = "Dijkstra".equals(algo) ? "-" : heuristic.getDisplayName();
+        lastConnectivity = controlPanel.getConnectivitySelector().getValue();
+    }
+
+    // Temp storage for stats
+    private String lastAlgo;
+    private String lastHeuristic;
+    private String lastConnectivity;
+    private double pendingCost;
+
+    private void play() {
+        isPlaying = true;
+        controlPanel.getBtnPlay().setText("⏸ Pause");
+        timer.start();
+    }
+
+    private void pause() {
+        isPlaying = false;
+        controlPanel.getBtnPlay().setText("▶ Lecture");
+        timer.stop();
+    }
+
+    private void setupTimer() {
+        timer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                if (!isPlaying || engine == null)
+                    return;
+
+                // Speed control
+                // Using a slider 1..100.
+                // Let's say we process 'speed' steps per frame.
+                int speed = (int) controlPanel.getSpeedSlider().getValue();
+
+                // If speed is exceptionally high, we might want to skip drawing every pixel,
+                // but direct drawing is usually fast enough for simple pathfinding demos.
+                // Let's batch updates.
+
+                int stepsToProcess = Math.max(1, speed * 10); // Multiplier makes it faster
+
+                for (int i = 0; i < stepsToProcess; i++) {
+                    if (engine.isFinished()) {
+                        pause();
+
+                        // 1. Clear overlay by redrawing base image
+                        redessinerImageBase();
+
+                        // 2. Draw final path only (Red)
+                        int startPathIndex = engine.getVisitedCount();
+                        int total = engine.getTotalSteps();
+
+                        for (int k = startPathIndex; k < total; k++) {
+                            int nodeId = engine.getHistoryNode(k);
+                            if (nodeId == -1)
+                                continue;
+
+                            int y = nodeId / (int) img.getWidth();
+                            int x = nodeId % (int) img.getWidth();
+                            writer.setArgb(x, y, 0xFFFF0000); // Red Path
+                        }
+
+                        // 3. Add stats
+                        statsTable.addRecord(lastAlgo, lastHeuristic, lastConnectivity, engine.getVisitedCount(),
+                                engine.getPathSize(), pendingCost);
+
+                        break;
+                    }
+
+                    int nodeId = engine.getHistoryNode(engine.getCurrentStep());
+                    boolean isPath = engine.isPathStep(engine.getCurrentStep());
+                    engine.step();
+
+                    if (nodeId != -1) {
+                        int y = nodeId / (int) img.getWidth();
+                        int x = nodeId % (int) img.getWidth();
+
+                        int color = isPath ? 0xFF00FF00 : 0xFF0000FF; // Green Path, Red-Blueish Visited?
+                        // Visited: Light blue with transparency for better visibility
+                        // rgba(74,158,255,0.25) = ARGB 0x404A9EFF
+                        if (!isPath)
+                            color = 0x404A9EFF;
+                        else
+                            color = 0xFFFF0000; // Red Path
+
+                        // Use alpha blending for semi-transparent colors
+                        if ((color >> 24) != 0xFF) {
+                            setPixelWithAlpha(x, y, color);
+                        } else {
+                            writer.setArgb(x, y, color);
+                        }
+                    }
+                }
+            }
+        };
+    }
+}

@@ -1,0 +1,221 @@
+/* ==========================================
+   MODERN JAVAFX STYLESHEET
+   Theme: Sobre, Moderne, Professionnel
+   ========================================== */
+
+/* ========== ROOT & PALETTE ========== */
+.root {
+    -fx-background-color: #F5F5F5; /* Fond général gris très clair */
+    -fx-font-family: "Segoe UI", "Roboto", Arial, sans-serif;
+    -fx-font-size: 13px;
+}
+
+/* ========== BORDER PANE ========== */
+.border-pane {
+    -fx-background-color: #F5F5F5;
+}
+
+/* ========== TOOLBAR TOP ========== */
+.toolbar-top {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 12px 15px;
+    -fx-spacing: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 5, 0.0, 0, 2);
+}
+
+.tool-bar {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 12px 15px;
+    -fx-spacing: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 5, 0.0, 0, 2);
+}
+
+.tool-bar .separator {
+    -fx-padding: 0 8px;
+}
+
+/* ========== STATUS BAR ========== */
+.status-bar {
+    -fx-background-color: #E0E0E0;
+    -fx-padding: 10px 15px;
+}
+
+.status-bar .label {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: #333333;
+}
+
+/* ========== BUTTONS - DEFAULT ========== */
+.button {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #333333;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: #D0D0D0;
+    -fx-border-width: 1px;
+    -fx-padding: 8px 16px;
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 3, 0.0, 0, 1);
+    -fx-transition: all 0.2s ease;
+}
+
+.button:hover {
+    -fx-background-color: #F8F8F8;
+    -fx-border-color: #B0B0B0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 5, 0.0, 0, 2);
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+.button:pressed {
+    -fx-background-color: #EEEEEE;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 2, 0.0, 0, 1);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* ========== BUTTON PRIMARY (Lecture/Play) ========== */
+.btn-primary {
+    -fx-background-color: linear-gradient(to bottom, #2196F3, #1976D2);
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 20px;
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.4), 6, 0.0, 0, 2);
+}
+
+.btn-primary:hover {
+    -fx-background-color: linear-gradient(to bottom, #42A5F5, #2196F3);
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.6), 8, 0.0, 0, 3);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.btn-primary:pressed {
+    -fx-background-color: linear-gradient(to bottom, #1976D2, #1565C0);
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.3), 4, 0.0, 0, 1);
+}
+
+.btn-primary:disabled {
+    -fx-background-color: #BDBDBD;
+    -fx-text-fill: #757575;
+    -fx-opacity: 0.6;
+    -fx-effect: none;
+}
+
+/* ========== BUTTON SUCCESS (pour états alternatifs) ========== */
+.btn-success {
+    -fx-background-color: linear-gradient(to bottom, #4CAF50, #388E3C);
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-font-weight: bold;
+}
+
+.btn-success:hover {
+    -fx-background-color: linear-gradient(to bottom, #66BB6A, #4CAF50);
+    -fx-effect: dropshadow(gaussian, rgba(76, 175, 80, 0.5), 8, 0.0, 0, 3);
+}
+
+/* ========== COMBOBOX ========== */
+.combo-box {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: #D0D0D0;
+    -fx-border-width: 1px;
+    -fx-padding: 6px 12px;
+}
+
+.combo-box:hover {
+    -fx-border-color: #2196F3;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D0D0D0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 8, 0.0, 0, 4);
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #333333;
+    -fx-padding: 8px 12px;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #E3F2FD;
+}
+
+.combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: #FFFFFF;
+}
+
+/* ========== SLIDER ========== */
+.slider {
+    -fx-padding: 5px 0;
+}
+
+.slider .track {
+    -fx-background-color: #E0E0E0;
+    -fx-background-radius: 4px;
+    -fx-pref-height: 6px;
+}
+
+.slider .thumb {
+    -fx-background-color: #2196F3;
+    -fx-background-radius: 8px;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.4), 4, 0.0, 0, 2);
+}
+
+.slider .thumb:hover {
+    -fx-background-color: #42A5F5;
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+}
+
+.slider:disabled .thumb {
+    -fx-background-color: #BDBDBD;
+    -fx-effect: none;
+}
+
+/* ========== LABELS ========== */
+.label {
+    -fx-text-fill: #333333;
+}
+
+.label-vitesse {
+    -fx-font-weight: 500;
+    -fx-padding: 0 8px 0 0;
+}
+
+/* ========== IMAGE VIEW ========== */
+.image-view {
+    -fx-background-color: #FFFFFF;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 10, 0.0, 0, 2);
+}
+
+/* ========== SCROLL PANE ========== */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: #F5F5F5;
+}
+
+/* ========== SEPARATOR ========== */
+.separator {
+    -fx-padding: 0 5px;
+}
+
+.separator .line {
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px;
+}
